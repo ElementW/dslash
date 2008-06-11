@@ -12,4 +12,4 @@
   # Enter the source directory: `cd dslash-read-only`
   # Compile: `gcc -o dslash dslash.c`
   # Show Help: `./dslash -h`
-  # Trim a ROM file: `./dslash infile.nds outfile.ds`
+  # Trim a ROM file: `./dslash infile.nds outfile.nds`
