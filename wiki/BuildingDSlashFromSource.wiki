@@ -1,0 +1,14 @@
+#summary Building DSlash from source
+
+=Building DSlash from source=
+==What you need==
+  * Linux. DSlash is not currently tested on other platforms.
+  * A subversion client. These instructions assume svn.
+  * A C compiler. These instructions assume gcc.
+
+== Steps ==
+  # Check out the latest DSlash: `svn checkout http://dslash.googlecode.com/svn/trunk/ dslash-read-only`
+  # Enter the source directory: `cd dslash-read-only`
+  # Compile: `gcc -o dslash dslash.c`
+  # Test: `./dslash infile.nds outfile.ds`
+  # Help: `./dslash -h`
