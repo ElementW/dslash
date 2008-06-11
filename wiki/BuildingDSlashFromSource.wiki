@@ -1,4 +1,6 @@
-#summary Building DSlash from source
+#summary How to obtain and compile the latest DSlash source code.
+
+=Building DSlash from Source=
 
 ==What you need==
   * Linux. DSlash is not currently tested on other platforms.
