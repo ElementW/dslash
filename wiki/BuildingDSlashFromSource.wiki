@@ -11,5 +11,5 @@
   # Check out the latest DSlash: `svn checkout http://dslash.googlecode.com/svn/trunk/ dslash-read-only`
   # Enter the source directory: `cd dslash-read-only`
   # Compile: `gcc -o dslash dslash.c`
-  # Test: `./dslash infile.nds outfile.ds`
-  # Help: `./dslash -h`
+  # Get Help: `./dslash -h`
+  # Trim a ROM file: `./dslash infile.nds outfile.ds`
