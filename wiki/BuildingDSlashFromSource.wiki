@@ -8,8 +8,11 @@
   * A C compiler. These instructions assume gcc.
 
 == Steps ==
-  # Check out the latest DSlash: `svn checkout http://dslash.googlecode.com/svn/trunk/ dslash-read-only`
+  # Check out the latest DSlash: `svn checkout http://dslash.googlecode.com/svn/trunk/ dslash-read-only`^1^
   # Enter the source directory: `cd dslash-read-only`
   # Compile: `gcc -o dslash dslash.c`
   # Show Help: `./dslash -h`
   # Trim a ROM file: `./dslash infile.nds outfile.nds`
+
+===Notes===
+1. If you've already checked out DSlash, use `svn update http://dslash.googlecode.com/svn/trunk/ dslash-read-only` (issued from the same location where you checked out) instead
