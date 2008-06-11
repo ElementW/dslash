@@ -1,0 +1,6 @@
+#summary What's not yet working in DSlash
+
+== What's broken ==
+
+  * inline trimming (`dslash -i romfile.nds`)
+  * if no output file is specified, dslash segfaults
