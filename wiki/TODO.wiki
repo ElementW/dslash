@@ -1,0 +1,11 @@
+#summary What's not yet working in DSlash
+
+== TODO ==
+
+  * inline trimming (`dslash -i romfile.nds`)
+  * fix segfault if no output file is specified
+  * icon extraction
+
+== MAYBENOT ==
+  * icon insertion?
+  * dump FAT?
