@@ -1,0 +1,36 @@
+Dslash
+------------
+
+Dslash is a swiss army knife for dealing with Nintendo DS Roms files.  
+Its was originally created as a fork from ndstrim.
+
+Features
+----------
+ - Trim.  It trims nds rom files down to the size specified in the ndsrom 
+   headers.
+ - In place trimming.  When trimming in place, the rom passed in is the
+   rom that is modified.  Since no copying is involved this has the advantage
+   of trimming very fast.
+ - Detailed Header information.  Extract internal names,titles,etc from rom
+   header.
+ - Verified to work on both Little Endian (verified on x86) and Big Endian
+   (verified on mips) Architectures.:
+
+
+Usage
+----------
+Usage is provided tersely on the command line as well with the -h option
+
+e.g.
+: ./dslash -h
+Usage: ./dslash [-hpdvi] [-t <icon_file>] ndsfile [trimmed_ndsfile]
+       -h : help
+       -p : print ROM information
+       -i : trim ROM in place (very fast)
+       -d : debug output
+       -v : verbose
+
+       -t <filename>  : extract icon from ROM into filename (bmp format)
+
+
+
