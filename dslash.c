@@ -158,7 +158,8 @@ int main(int argc, char *argv[])
 
     // in all cases there will be a file/stdio get it ready for use
     dsprintfd("Opening input file: '%s'.\n",infilename);
-    if ((infileptr=fopen(infilename,"rb")) == NULL)
+    // note this file is open in read and write incase we are doing inline triming
+    if ((infileptr=fopen(infilename,"r+b")) == NULL)
     {
         perror(infilename);
         return -1;
@@ -192,22 +193,35 @@ int main(int argc, char *argv[])
 
 
     // trim file
-    rom_trim(infileptr, outfileptr, &rom_info);
+    if ( flag.inplace)
+    {
+        rom_trim_inplace(infileptr, &rom_info);
+    }
+    else
+    {
+        rom_trim(infileptr, outfileptr, &rom_info);
+    }
 
     //Close input
     dsprintfd("Closing input.\n");
-    if (fclose(infileptr) == EOF) 
+    if (outfileptr != NULL )
     {
-        perror(infilename);
-        return 1;
+        if (fclose(infileptr) == EOF) 
+        {
+            perror(infilename);
+            return 1;
+        }
     }
 
     //Close output
     dsprintfd("Closing output.\n");
-    if (fclose(outfileptr) == EOF) 
+    if (outfileptr != NULL )
     {
-        perror(outfilename);
-        return 1;
+        if (fclose(outfileptr) == EOF) 
+        {
+            perror(outfilename);
+            return 1;
+        }
     }
 
     return 0;
@@ -365,6 +379,12 @@ int rom_trim(FILE *infileptr, FILE *outfileptr, nds_rom_info_t *rom_info)
     unsigned int tocopy=CPY_BUFFER_LEN;
     char *buffer=NULL;
 
+    if ((infileptr==NULL) || (outfileptr==NULL))
+    {
+        dsprintfd("infileptr or outfileptr NULL\n");
+        return -1;
+    }
+
     //Get input filesize
     if (fseek(infileptr,0,SEEK_END) < 0)
     {
@@ -381,7 +401,7 @@ int rom_trim(FILE *infileptr, FILE *outfileptr, nds_rom_info_t *rom_info)
         return 1;
     }
 
-    newsize=rom_info->hdr.rom_size+WIFI_LEN;
+    newsize=endian_32(rom_info->hdr.rom_size)+WIFI_LEN;
 
     //Check if file is big enough to contain the rom+wifi
     if (filesize <= newsize)
@@ -436,83 +456,40 @@ int rom_trim(FILE *infileptr, FILE *outfileptr, nds_rom_info_t *rom_info)
     return 0;
 }
 
-int rom_trim_inplace(FILE *infileptr, FILE *outfileptr, nds_rom_info_t *rom_info)
+int rom_trim_inplace(FILE *infileptr, nds_rom_info_t *rom_info)
 {
 
-    unsigned int filesize=0;
     unsigned int newsize=0;
-    unsigned int fpos=0;
-    unsigned int tocopy=CPY_BUFFER_LEN;
-    char *buffer=NULL;
+    int infilefd=0;
+    struct stat stat_file;
 
-    //Get input filesize
-    if (fseek(infileptr,0,SEEK_END) < 0)
+    // Get file descriptor associated with file stream
+    if ((infileptr==NULL) || (infilefd=fileno(infileptr))== -1 )
     {
-        perror("fseek");
+        dsprintfd("infileptr NULL or infileptr not valid stream\n");
         return -1;
     }
-    filesize=ftell(infileptr);
-    dsprintfd("Filesize: %d bytes.\n",filesize);
 
-    //Check if file is big enough to contain a DS cartridge header
-    if (filesize <= MIN_DS_HEADER)
+    // get file size
+    if (fstat(infilefd, &stat_file))
     {
-        fprintf(stderr,"Error: File is too small to contain a proper NDS cartridge header (corrupt ROM file?).\n");
-        return 1;
+        perror("fstat");
+        stat_file.st_size=newsize;
     }
 
-    newsize=rom_info->hdr.rom_size+WIFI_LEN;
-
-    //Check if file is big enough to contain the rom+wifi
-    if (filesize <= newsize)
+    newsize=endian_32(rom_info->hdr.rom_size)+WIFI_LEN;
+    if (ftruncate ( infilefd, newsize ))
     {
-        fprintf(stderr,"Notice: File cannot be trimmed any further.\n");
-        return 1;
+        perror("ftruncate");
+        return -1;
     }
 
 
-    if (outfileptr != NULL)
-    {
+    
 
-        //Reset input pos
-        rewind(infileptr);
+    //Done
+    dsprintf("ROM trimmed to %d bytes (saved %.1f MB).\n", 
+             newsize,(stat_file.st_size-newsize)/(float)MB);
 
-        // create a buffer for data copy
-        if ((buffer=(char *)malloc(CPY_BUFFER_LEN)) == NULL)
-        {
-#warning this should be debug info?
-            fprintf(stderr, "Can't malloc\n");
-            return 1;
-        }
-
-#warning setvbuf
-        //Start copying
-        dsprintfd("Copying data.\n");
-        while (fpos < newsize)
-        {
-            if (fpos+CPY_BUFFER_LEN > newsize) 
-            {
-                tocopy=newsize-fpos;
-            }
-            if (fread(buffer,tocopy,1,infileptr) == 0)
-            {
-                fprintf(stderr,"Read error\n"); 
-                return -1;
-            }
-            if (fwrite(buffer,tocopy,1,outfileptr) == 0)
-            {
-                fprintf(stderr,"Write error\n"); 
-                return -1;
-            }
-            fpos+=tocopy;
-        }
-
-
-        free(buffer);
-
-        //Done
-        dsprintf("ROM trimmed to %d bytes (saved %.1f MB).\n", newsize,(filesize-newsize)/(float)MB);
-
-    }
     return 0;
 }
