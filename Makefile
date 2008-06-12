@@ -1,7 +1,7 @@
 #makefile
 
 CC=gcc
-CFLAGS=-pg -g -DMEMWATCH -Wall
+CFLAGS=-pg -g -Wall
 CPPFLAGS=
 OBJS=  dslash.o
 FINAL = dslash

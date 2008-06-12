@@ -122,5 +122,7 @@ void print_rom_information(FILE *infileptr, nds_rom_info_t *rom_info);
 int get_nds_header(FILE* nds_rom_fp, nds_rom_info_t *rom_info);
 int rom_trim(FILE *infileptr, FILE *outfileptr, nds_rom_info_t *rom_info);
 int rom_trim_inplace(FILE *infileptr, nds_rom_info_t *rom_info);
+void dsprintf(char *format,...);
+void dsprintfd(char *format,...);
 
 #endif /* NDSTRIM_H */
