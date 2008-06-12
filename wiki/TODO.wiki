@@ -3,8 +3,7 @@
 == TODO ==
 
   * icon extraction
-  * process via stdin/stdout - this can be usefull for trimming straight from a
-    compressed rom (e.g. bunzip2 -c rom.bz2 | dslash - > uncompressed.rom )
+  * process via stdin/stdout - this can be usefull for trimming straight from a compressed rom (e.g. bunzip2 -c rom.bz2 | dslash - > uncompressed.rom )
 
 == MAYBENOT ==
   * icon insertion?
