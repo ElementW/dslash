@@ -146,9 +146,13 @@ int main(int argc, char *argv[])
     memset(&rom_info,0,sizeof(rom_info));
 
     /* get commandline arguments */
-    if (parse_commandline(argc,argv) )
+    if ((ret=parse_commandline(argc,argv)) != 0 )
     {
-        ret=-1;
+        // help messages will exit as ok
+        if (ret==1)
+        {
+            ret=0;  
+        }
         goto main_exit;
     }
 
@@ -257,7 +261,7 @@ int parse_commandline(int argc, char *argv[])
         {
             case 'h':
                 fprintf(stderr, HELP_MSG, argv[0]);
-                return 0;
+                return 1;
                 break;
             case 'p':
                 flag.print=1;
@@ -360,7 +364,7 @@ void print_rom_information(FILE *infileptr, nds_rom_info_t *rom_info)
     strncpy(str_buff,(char *)rom_info->hdr.maker_code,sizeof(rom_info->hdr.maker_code));
     str_buff[sizeof(rom_info->hdr.maker_code)]=0;
     dsprintf("Maker code               : %s\n",str_buff);
-    dsprintf("Filesystem ROM size      : % 9l bytes (%.1f MB)\n",filesize,filesize/(float)MB);
+    dsprintf("Filesystem ROM size      : % 9u bytes (%.1f MB)\n",filesize,filesize/(float)MB);
     dsprintf("Internal ROM size        : % 9u bytes (%.1f MB)\n",rom_size,rom_size/(float)MB);
     dsprintf("Internal ROM size + wifi : % 9u bytes (%.1f MB)\n",total_rom_size,total_rom_size/(float)MB);
 
