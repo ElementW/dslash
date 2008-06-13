@@ -1,0 +1,9 @@
+#summary DSlash Release Notes
+
+===0.2===
+  * Added in-place trimming
+  * Process STDIN
+  * Cleanup
+
+===0.1===
+  * Initial release
