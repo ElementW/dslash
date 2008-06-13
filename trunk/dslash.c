@@ -190,10 +190,6 @@ int main(int argc, char *argv[])
     {
         infileptr=stdin;
         outfileptr=stdout;
-        for (;;) 
-        {
-            sleep (1); 
-        }
     }
     else
     {
