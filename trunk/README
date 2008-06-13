@@ -1,11 +1,30 @@
-Dslash
-------------
+DSlash, a Nintendo DS rom tool
+Copyright (C) 2008 hyplex@gmail.com
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+##############################################################################
+ABOUT DSlash
+##############################################################################
 
 Dslash is a swiss army knife for dealing with Nintendo DS Roms files.  
 Its was originally created as a fork from ndstrim.
 
+##############################################################################
 Features
-----------
+##############################################################################
  - Trim.  It trims nds rom files down to the size specified in the ndsrom 
    headers.
  - In place trimming.  When trimming in place, the rom passed in is the
@@ -17,8 +36,9 @@ Features
    (verified on mips) Architectures.:
 
 
+##############################################################################
 Usage
-----------
+##############################################################################
 Usage is provided tersely on the command line as well with the -h option
 
 e.g.
@@ -31,6 +51,3 @@ Usage: ./dslash [-hpdvi] [-t <icon_file>] ndsfile [trimmed_ndsfile]
        -v : verbose
 
        -t <filename>  : extract icon from ROM into filename (bmp format)
-
-
-
