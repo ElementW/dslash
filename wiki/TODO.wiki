@@ -3,6 +3,7 @@
 == TODO ==
 
   * icon extraction
+  * improve unicode titles handling in -p output
 
 == MAYBENOT ==
   * icon insertion?
