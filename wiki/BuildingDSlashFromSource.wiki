@@ -8,11 +8,8 @@
   * A C compiler. These instructions assume gcc.
 
 == Steps ==
-  # Get the latest DSlash source code: `svn export http://dslash.googlecode.com/svn/trunk/ dslash`^1^
+  # Get the latest DSlash source code: `svn export http://dslash.googlecode.com/svn/trunk/ dslash`
   # Enter the source directory: `cd dslash`
   # Compile: `make`
   # Show Help: `./dslash -h`
   # Trim a ROM file: `./dslash infile.nds outfile.nds`
-
-===Notes===
-1. If you've already checked out DSlash, use `svn update http://dslash.googlecode.com/svn/trunk/ dslash-read-only` (issued from the same location where you checked out) instead
