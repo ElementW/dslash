@@ -1,0 +1,13 @@
+#summary About DSlash.
+=About DSlash=
+
+==Advantages==
+===Speed===
+When the inline option is used, DSlash operates hundreds of times faster than any other ROM trimmer of which we are currently aware. This is because most trimmers operate by copying the data from one ROM file into a new blank file, from the beginning of the file until the end of the useful data is reached. This creates excess filesystem activity which slows things down especially on a flash drive. DSlash, when invoked with the `-i` option, truncates the original ROM file in place with a simple system call. hyplex says this is like, totally way faster than the other thing.
+
+===STDIN/STDOUT processing===
+DSlash operates as a standard linux-style command line tool. ROM files can be used as input to any shell command, or you can pipe DSlash's output through other commands. Examples:
+  * To trim a zipped ROM file on the fly: 
+    * `unzip -c zipped_nds_romfile.zip | dslash - > trimmed_rom.nds`
+  * Just another way to trim a ROM file:
+    * `cat untrimmed_rom.nds | dslash - > trimmed_rom.nds`
