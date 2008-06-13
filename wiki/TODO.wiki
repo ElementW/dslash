@@ -1,10 +1,10 @@
-#summary What's not yet working in DSlash
+#summary What's not yet implemented in DSlash
 
-== TODO ==
-
+== SOON ==
   * icon extraction
-  * improve unicode titles handling in -p output
+  * improve unicode handling in -p output
 
-== MAYBENOT ==
-  * icon insertion?
-  * dump FAT?
+== SOMEDAY ==
+  * output ROM info to CSV format
+  * icon replacement
+  * dump FAT
