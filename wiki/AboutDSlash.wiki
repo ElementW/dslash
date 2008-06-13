@@ -5,7 +5,7 @@ When the inline option is used, DSlash operates hundreds of times faster than an
 ===STDIN/STDOUT processing===
 DSlash can operate directly on .nds files, but it also operates as a standard linux-style command line tool, processing input from STDIN and generating output on STDOUT. So you can pipe output from any shell command through DSlash, or you can pipe DSlash's output through other commands. Examples:
   * Standard usage, trimming an .nds file:
-    * dslash untrimmed_rom.nds trimmed_rom.nds
+    * `dslash untrimmed_rom.nds trimmed_rom.nds`
   * To trim a zipped ROM file on the fly: 
     * `unzip -c zipped_nds_rom.zip | dslash - > unzipped_and_trimmed_rom.nds`
   * Just another way to trim a ROM file:
