@@ -117,6 +117,7 @@ typedef struct {
 //
 // function declarations
 //
+int rom_trim_stdin(FILE *infileptr, FILE *outfileptr, nds_rom_info_t *rom_info);
 int parse_commandline(int argc, char *argv[]);
 void print_rom_information(FILE *infileptr, nds_rom_info_t *rom_info);
 int get_nds_header(FILE* nds_rom_fp, nds_rom_info_t *rom_info);

@@ -63,6 +63,7 @@ static struct {
     unsigned int debug:1;
     unsigned int print:1;
     unsigned int inplace:1;
+    unsigned int stdin:1;
 } flag;
 
 
@@ -72,32 +73,48 @@ static struct {
 
 int get_nds_header(FILE* nds_rom_fp, nds_rom_info_t *rom_info)
 {
+    int ret=0;
     uint32_t icon_title_offset;
 
     dsprintfd("%s called'.\n",__FUNCTION__);
 
-    if ( (rom_info == NULL ) || (nds_rom_fp == NULL))
+    do
     {
-        return -1;
-    }
-
-    // read in header, should only read in one item
-    if ((fread(&rom_info->hdr, sizeof(nds_rom_hdr_t), 1, nds_rom_fp)) != 1)
-    {
-        return -1;
-    }
-
-    icon_title_offset=endian_32(rom_info->hdr.icon_title_off);
-    if (icon_title_offset != 0 )
-    {
-        fseek(nds_rom_fp,icon_title_offset,SEEK_SET);
-        if ((fread(&rom_info->icon, sizeof(nds_rom_icon_title_t), 1, nds_rom_fp)) != 1)
+        if ( (rom_info == NULL ) || (nds_rom_fp == NULL))
         {
-            return -2;
+            ret=-1;
+            break;
         }
-    }
 
-    return 0;
+        // read in header, should only read in one item
+        if ((fread(&rom_info->hdr, sizeof(nds_rom_hdr_t), 1, nds_rom_fp)) != 1)
+        {
+            ret=-1;
+            break;
+        }
+
+        // if input file is coming from stdin, we can't seek,
+        // so we don't gather this information
+        if (!flag.stdin)
+        {
+            icon_title_offset=endian_32(rom_info->hdr.icon_title_off);
+            if (icon_title_offset != 0 )
+            {
+                if (fseek(nds_rom_fp,icon_title_offset,SEEK_SET))
+                {
+                    ret=-1;
+                    break;
+                }
+                if ((fread(&rom_info->icon, sizeof(nds_rom_icon_title_t), 1, nds_rom_fp)) != 1)
+                {
+                    ret=-1;
+                    break;
+                }
+            }
+        }
+    } while (0);
+
+    return ret;
 }
 
 
@@ -164,27 +181,42 @@ int main(int argc, char *argv[])
         outfilename=argv[optind+1];
     }
 
+    //
+    // open our input and output files
+    //
     // in all cases there will be a file/stdio get it ready for use
     dsprintfd("Opening input file: '%s'.\n",infilename);
-    // note this file is open in read and write incase we are doing inline triming
-    if ((infileptr=fopen(infilename,"r+b")) == NULL)
+    if (flag.stdin)
     {
-        perror(infilename);
-        ret=-1;
-        goto main_exit;
-    }
-
-    //Open output
-    if (outfilename != NULL )
-    {
-        dsprintfd("Opening output file: '%s'.\n",outfilename);
-        if ((outfileptr=fopen(outfilename,"wb")) == NULL)
+        infileptr=stdin;
+        outfileptr=stdout;
+        for (;;) 
         {
-            perror(outfilename);
-            ret=-1;
-            goto main_cleanup;
+            sleep (1); 
         }
     }
+    else
+    {
+        // note this file is open in read and write incase we are doing inline triming
+        if ((infileptr=fopen(infilename,"r+b")) == NULL)
+        {
+            perror(infilename);
+            ret=-1;
+            goto main_exit;
+        }
+        //Open output
+        if (outfilename != NULL )
+        {
+            dsprintfd("Opening output file: '%s'.\n",outfilename);
+            if ((outfileptr=fopen(outfilename,"wb")) == NULL)
+            {
+                perror(outfilename);
+                ret=-1;
+                goto main_cleanup;
+            }
+        }
+    }
+
 
     // populate ROM info structure
     if (get_nds_header(infileptr, &rom_info) !=0 )
@@ -204,9 +236,13 @@ int main(int argc, char *argv[])
 
 
     // trim file
-    if ( flag.inplace)
+    if (flag.inplace)
     {
         rom_trim_inplace(infileptr, &rom_info);
+    }
+    else if (flag.stdin)
+    {
+        rom_trim_stdin(infileptr, outfileptr, &rom_info);
     }
     else
     {
@@ -285,6 +321,17 @@ int parse_commandline(int argc, char *argv[])
     if (optind >= argc) {
         fprintf(stderr, "Missing nds file!\n");
         return 1;
+    }
+
+    if ((strlen(argv[optind]) == 1) && (argv[optind][0]=='-'))
+    {
+        flag.stdin=1;
+    }
+
+    if (flag.stdin && flag.inplace)
+    {
+        fprintf(stderr, "warning -i has no effect when reading from stdin\n");
+        flag.inplace=0;
     }
 
     dsprintfd("Flags: verbose=%d, debug=%d, print=%d, inplace=%d\n",
@@ -385,6 +432,89 @@ void print_rom_information(FILE *infileptr, nds_rom_info_t *rom_info)
 }
 
 
+/*
+ * Note, this functions works both on files that can be seeked (regular files), 
+ * and ones that can't (stdin/stdout)
+ *
+ */
+int rom_trim_stdin(FILE *infileptr, FILE *outfileptr, nds_rom_info_t *rom_info)
+{
+
+    int ret=0;
+    unsigned int filesize=0;
+    unsigned int newsize=0;
+    unsigned int fpos=0;
+    unsigned int tocopy=CPY_BUFFER_LEN;
+    char *buffer=NULL;
+
+
+    if ((infileptr==NULL) || (outfileptr==NULL))
+    {
+        dsprintfd("infileptr or outfileptr NULL\n");
+        ret = -1;
+        goto rom_trim_stdin_exit;
+    }
+
+    newsize=endian_32(rom_info->hdr.rom_size)+WIFI_LEN;
+
+
+    // when reading from stdin, we first read the header in.   This puts us
+    // exactly at file position sizeof(nds_rom_hdr_t)
+    fpos=sizeof(nds_rom_hdr_t);
+    // write out header
+    if (fwrite(&rom_info->hdr,sizeof(nds_rom_hdr_t),1,outfileptr) == 0)
+    {
+        fprintf(stderr,"Write error.\n"); 
+        ret = -1;
+        goto rom_trim_stdin_cleanup;
+    }
+
+
+
+    // create a buffer for data copy
+    if ((buffer=(char *)malloc(CPY_BUFFER_LEN)) == NULL)
+    {
+        fprintf(stderr, "Can't malloc\n");
+        ret = -1;
+        goto rom_trim_stdin_exit;
+    }
+
+#warning add general copy in to out
+#warning setvbuf
+    //Start copying
+    dsprintfd("Copying data.\n");
+    while (fpos < newsize)
+    {
+        if (fpos+CPY_BUFFER_LEN > newsize) 
+        {
+            tocopy=newsize-fpos;
+        }
+        if (fread(buffer,tocopy,1,infileptr) == 0)
+        {
+            fprintf(stderr,"Read error.\n"); 
+            ret = -1;
+            goto rom_trim_stdin_cleanup;
+        }
+        if (fwrite(buffer,tocopy,1,outfileptr) == 0)
+        {
+            fprintf(stderr,"Write error.\n"); 
+            ret = -1;
+            goto rom_trim_stdin_cleanup;
+        }
+        fpos+=tocopy;
+    }
+
+    //Done
+    dsprintf("File trimmed to %d bytes (saved %.1f MB).\n", newsize,(filesize-newsize)/(float)MB);
+
+
+rom_trim_stdin_cleanup:
+    free (buffer);
+    
+rom_trim_stdin_exit:
+
+    return ret;
+}
 int rom_trim(FILE *infileptr, FILE *outfileptr, nds_rom_info_t *rom_info)
 {
 
@@ -432,47 +562,44 @@ int rom_trim(FILE *infileptr, FILE *outfileptr, nds_rom_info_t *rom_info)
     }
 
 
-    if (outfileptr != NULL)
+
+    //Reset input pos
+    rewind(infileptr);
+
+    // create a buffer for data copy
+    if ((buffer=(char *)malloc(CPY_BUFFER_LEN)) == NULL)
     {
-
-        //Reset input pos
-        rewind(infileptr);
-
-        // create a buffer for data copy
-        if ((buffer=(char *)malloc(CPY_BUFFER_LEN)) == NULL)
-        {
-            fprintf(stderr, "Can't malloc\n");
-            ret = -1;
-            goto rom_trim_exit;
-        }
+        fprintf(stderr, "Can't malloc\n");
+        ret = -1;
+        goto rom_trim_exit;
+    }
 
 #warning setvbuf
-        //Start copying
-        dsprintfd("Copying data.\n");
-        while (fpos < newsize)
+    //Start copying
+    dsprintfd("Copying data.\n");
+    while (fpos < newsize)
+    {
+        if (fpos+CPY_BUFFER_LEN > newsize) 
         {
-            if (fpos+CPY_BUFFER_LEN > newsize) 
-            {
-                tocopy=newsize-fpos;
-            }
-            if (fread(buffer,tocopy,1,infileptr) == 0)
-            {
-                fprintf(stderr,"Read error.\n"); 
-                ret = -1;
-                goto rom_trim_cleanup;
-            }
-            if (fwrite(buffer,tocopy,1,outfileptr) == 0)
-            {
-                fprintf(stderr,"Write error.\n"); 
-                ret = -1;
-                goto rom_trim_cleanup;
-            }
-            fpos+=tocopy;
+            tocopy=newsize-fpos;
         }
-
-        //Done
-        dsprintf("File trimmed to %d bytes (saved %.1f MB).\n", newsize,(filesize-newsize)/(float)MB);
+        if (fread(buffer,tocopy,1,infileptr) == 0)
+        {
+            fprintf(stderr,"Read error.\n"); 
+            ret = -1;
+            goto rom_trim_cleanup;
+        }
+        if (fwrite(buffer,tocopy,1,outfileptr) == 0)
+        {
+            fprintf(stderr,"Write error.\n"); 
+            ret = -1;
+            goto rom_trim_cleanup;
+        }
+        fpos+=tocopy;
     }
+
+    //Done
+    dsprintf("File trimmed to %d bytes (saved %.1f MB).\n", newsize,(filesize-newsize)/(float)MB);
 
 
 rom_trim_cleanup:
