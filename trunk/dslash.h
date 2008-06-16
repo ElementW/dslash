@@ -60,6 +60,7 @@ http://gbatemp.net/index.php?showtopic=44022
 //
 // Constants/Macros
 //
+#define VERSION "0.0.1\n"
 
 
 //
@@ -133,6 +134,7 @@ typedef struct __attribute__ ((packed)) {
 typedef struct {
     nds_rom_hdr_t        hdr;  
     nds_rom_icon_title_t icon;
+    unsigned int filesystem_size;
 } nds_rom_info_t ;
 
 
@@ -143,7 +145,7 @@ typedef struct {
 int rom_trim_stdin(FILE *infileptr, FILE *outfileptr, nds_rom_info_t *rom_info);
 int parse_commandline(int argc, char *argv[]);
 void print_rom_information(FILE *infileptr, nds_rom_info_t *rom_info);
-int get_nds_header(FILE* nds_rom_fp, nds_rom_info_t *rom_info);
+int get_nds_info(FILE* nds_rom_fp, nds_rom_info_t *rom_info);
 int rom_trim(FILE *infileptr, FILE *outfileptr, nds_rom_info_t *rom_info);
 int rom_trim_inplace(FILE *infileptr, nds_rom_info_t *rom_info);
 void dsprintf(char *format,...);

@@ -63,13 +63,14 @@ http://gbatemp.net/index.php?showtopic=44022
 #define MSG_BUFFER_LEN  512         // sizes for tmp message buffers
 
 // help message
-#define OPTION_STR "hpdvit:"
-#define HELP_MSG "Usage: %s [-hpdvi] [-t <icon_file>] ndsfile [trimmed_ndsfile]\n"\
+#define OPTION_STR "hpdvVit:"
+#define HELP_MSG "Usage: %s [-hpdvVi] [-t <icon_file>] ndsfile [trimmed_ndsfile]\n"\
                  "       -h : help\n"\
                  "       -p : print ROM information\n"\
                  "       -i : trim ROM in place (very fast)\n"\
                  "       -d : debug output\n"\
                  "       -v : verbose\n"\
+                 "       -V : version\n"\
                  "\n"\
                  "       -t <filename>  : extract icon from ROM into filename (bmp format)\n"
 
@@ -91,10 +92,14 @@ static struct {
 
 
 
-int get_nds_header(FILE* nds_rom_fp, nds_rom_info_t *rom_info)
+int get_nds_info(FILE* nds_rom_fp, nds_rom_info_t *rom_info)
 {
     int ret=0;
     uint32_t icon_title_offset;
+    uint8_t *buff=NULL;
+    int bytes_left_to_read=0;
+    unsigned int total_bytes_read=0;
+    int buff_size=0;
 
     dsprintfd("%s called'.\n",__FUNCTION__);
 
@@ -106,18 +111,32 @@ int get_nds_header(FILE* nds_rom_fp, nds_rom_info_t *rom_info)
             break;
         }
 
-        // read in header, should only read in one item
-        if ((fread(&rom_info->hdr, sizeof(nds_rom_hdr_t), 1, nds_rom_fp)) != 1)
+        if ((buff=(uint8_t *)malloc(CPY_BUFFER_LEN))==NULL)
         {
             ret=-1;
             break;
         }
 
+        //
+        // read in header, should only read in one item
+        //
+        if ((fread(&rom_info->hdr, sizeof(nds_rom_hdr_t), 1, nds_rom_fp)) != 1)
+        {
+            ret=-1;
+            break;
+        }
+        total_bytes_read=sizeof(nds_rom_hdr_t);
+
+
+        // we make speed optimizations based on if we are doing stdin
+        // or regular file io.
+
+
         // if input file is coming from stdin, we can't seek,
         // so we don't gather this information
+        icon_title_offset=endian_32(rom_info->hdr.icon_title_off);
         if (!flag.stdin)
         {
-            icon_title_offset=endian_32(rom_info->hdr.icon_title_off);
             if (icon_title_offset != 0 )
             {
                 if (fseek(nds_rom_fp,icon_title_offset,SEEK_SET))
@@ -132,7 +151,85 @@ int get_nds_header(FILE* nds_rom_fp, nds_rom_info_t *rom_info)
                 }
             }
         }
+        else if (flag.print)
+        {
+            // We only populate additonal header information on stdin, -p printing is on
+            //
+            // if we are reading from stdin we must skip bytes until we 
+            // get to the desired offset by reading and throwing away
+            bytes_left_to_read=icon_title_offset-total_bytes_read;
+            buff_size=CPY_BUFFER_LEN;
+            while (bytes_left_to_read > 0)
+            {
+
+                if (bytes_left_to_read < CPY_BUFFER_LEN)
+                {
+                    buff_size=bytes_left_to_read;
+                }
+                if ((fread(buff, buff_size, 1, nds_rom_fp)) != 1)
+                {
+                    perror("fread");
+                    ret=-1;
+                    break;
+                }
+                total_bytes_read+=buff_size;
+                bytes_left_to_read-=buff_size;
+
+            }
+
+            dsprintfd("Reading icon/title at offset %d\n",total_bytes_read);
+            // read in icon/title header
+            if ((fread(&rom_info->icon, sizeof(nds_rom_icon_title_t), 1, nds_rom_fp)) != 1)
+            {
+                ret=-1;
+                break;
+            }
+
+
+        }
+
+
+        //
+        //Get filesystem file size
+        //
+        if (!flag.stdin)
+        {
+            // use faster fseek if not using stdin
+            if (fseek(nds_rom_fp,0,SEEK_END) == 0)
+            {
+                rom_info->filesystem_size=ftell(nds_rom_fp);
+            }
+            else
+            {
+                perror("fseek");
+            }
+        }
+
+        dsprintfd("Total bytes read in rom headers %d\n",total_bytes_read);
+
+
+
+
+        //
+        // perform header checks
+        //
+
+        //Check if file is big enough to contain a DS cartridge header
+        if ((!flag.stdin) && (rom_info->filesystem_size <= MIN_DS_HEADER))
+        {
+            fprintf(stderr,"Error: File is too small to contain a proper NDS cartridge header (corrupt ROM file?).\n");
+            ret = -1;
+            break;
+        }
+
+
+
     } while (0);
+
+    if (buff!=NULL)
+    {
+        free (buff);
+    }
 
     return ret;
 }
@@ -235,7 +332,7 @@ int main(int argc, char *argv[])
 
 
     // populate ROM info structure
-    if (get_nds_header(infileptr, &rom_info) !=0 )
+    if (get_nds_info(infileptr, &rom_info) !=0 )
     {
         fprintf(stderr, "Bad ROM header. Could not read ROM information.\n");
         ret=-1;
@@ -315,6 +412,10 @@ int parse_commandline(int argc, char *argv[])
                 fprintf(stderr, HELP_MSG, argv[0]);
                 return 1;
                 break;
+            case 'V':
+                printf(VERSION);
+                return 1;
+                break;
             case 'p':
                 flag.print=1;
                 break;
@@ -363,7 +464,6 @@ void print_rom_information(FILE *infileptr, nds_rom_info_t *rom_info)
 
     char str_buff[MSG_BUFFER_LEN]={0};
     char *str_buff_ptr=NULL;
-    long filesize=0;
     unsigned int rom_size=0;
     unsigned int total_rom_size=0;
     unsigned int i=0;
@@ -406,16 +506,6 @@ void print_rom_information(FILE *infileptr, nds_rom_info_t *rom_info)
         }
     }
 
-    //Get input filesize
-    if (fseek(infileptr,0,SEEK_END) == 0)
-    {
-        filesize=ftell(infileptr);
-    }
-    else
-    {
-        perror("fseek");
-        filesize=-1;
-    }
 
     rom_size=endian_32(rom_info->hdr.rom_size);
     total_rom_size=rom_size+WIFI_LEN;
@@ -427,22 +517,36 @@ void print_rom_information(FILE *infileptr, nds_rom_info_t *rom_info)
     strncpy(str_buff,(char *)rom_info->hdr.maker_code,sizeof(rom_info->hdr.maker_code));
     str_buff[sizeof(rom_info->hdr.maker_code)]=0;
     dsprintf("Maker code               : %s\n",str_buff);
-    dsprintf("Filesystem ROM size      : % 9u bytes (%.1f MB)\n",filesize,filesize/(float)MB);
+    if (flag.stdin)
+    {
+        dsprintf("Filesystem ROM size      : N/A during stdin\n");
+    }
+    else
+    {
+        dsprintf("Filesystem ROM size      : % 9u bytes (%.1f MB)\n",rom_info->filesystem_size,rom_info->filesystem_size/(float)MB);
+    }
     dsprintf("Internal ROM size        : % 9u bytes (%.1f MB)\n",rom_size,rom_size/(float)MB);
     dsprintf("Internal ROM size + wifi : % 9u bytes (%.1f MB)\n",total_rom_size,total_rom_size/(float)MB);
 
-    bytes_saved=filesize-total_rom_size;
-    if (filesize<total_rom_size)
+
+    if (flag.stdin)
     {
-        bytes_saved=0;
+        dsprintf("Bytes saved by trimming  : N/A during stdin\n",bytes_saved,bytes_saved/(float)MB);
+    }
+    else
+    {
+        bytes_saved=rom_info->filesystem_size-total_rom_size;
+        if (rom_info->filesystem_size<total_rom_size)
+        {
+            bytes_saved=0;
+        }
+        dsprintf("Bytes saved by trimming  : % 9u bytes (%.1f MB)\n",bytes_saved,bytes_saved/(float)MB);
+        if (rom_info->filesystem_size<total_rom_size)
+        {
+            fprintf(stderr,"*Warning*: Filesystem size is less than internal ROM size + wifi.  ROM file may be corrupted!\n");
+        }
     }
 
-    dsprintf("Bytes saved by trimming  : % 9u bytes (%.1f MB)\n",bytes_saved,bytes_saved/(float)MB);
-
-    if (filesize<total_rom_size)
-    {
-        fprintf(stderr,"*Warning*: Filesystem size is less than internal ROM size + wifi.  ROM file may be corrupted!\n");
-    }
 
     return;
 }
@@ -535,10 +639,9 @@ int rom_trim(FILE *infileptr, FILE *outfileptr, nds_rom_info_t *rom_info)
 {
 
     int ret=0;
-    unsigned int filesize=0;
     unsigned int newsize=0;
-    unsigned int fpos=0;
-    unsigned int tocopy=CPY_BUFFER_LEN;
+    unsigned int bytes_left_to_copy=0;
+    unsigned int buff_size=0;
     char *buffer=NULL;
 
 
@@ -549,38 +652,17 @@ int rom_trim(FILE *infileptr, FILE *outfileptr, nds_rom_info_t *rom_info)
         goto rom_trim_exit;
     }
 
-    //Get input filesize
-    if (fseek(infileptr,0,SEEK_END) < 0)
-    {
-        perror("fseek");
-        ret = -1;
-        goto rom_trim_exit;
-    }
-    filesize=ftell(infileptr);
-    dsprintfd("Filesize: %d bytes.\n",filesize);
-
-    //Check if file is big enough to contain a DS cartridge header
-    if (filesize <= MIN_DS_HEADER)
-    {
-        fprintf(stderr,"Error: File is too small to contain a proper NDS cartridge header (corrupt ROM file?).\n");
-        ret = -1;
-        goto rom_trim_exit;
-    }
 
     newsize=endian_32(rom_info->hdr.rom_size)+WIFI_LEN;
 
     //Check if file is big enough to contain the rom+wifi
-    if (filesize <= newsize)
+    if (rom_info->filesystem_size <= newsize)
     {
         fprintf(stderr,"Notice: File cannot be trimmed any further.\n");
         ret = -1;
         goto rom_trim_exit;
     }
 
-
-
-    //Reset input pos
-    rewind(infileptr);
 
     // create a buffer for data copy
     if ((buffer=(char *)malloc(CPY_BUFFER_LEN)) == NULL)
@@ -591,31 +673,35 @@ int rom_trim(FILE *infileptr, FILE *outfileptr, nds_rom_info_t *rom_info)
     }
 
 #warning setvbuf
-    //Start copying
+    //Start copying from the beginning of the rom
+    rewind(infileptr);
+    bytes_left_to_copy=newsize;
+    buff_size=CPY_BUFFER_LEN;
     dsprintfd("Copying data.\n");
-    while (fpos < newsize)
+    while (bytes_left_to_copy > 0 )
     {
-        if (fpos+CPY_BUFFER_LEN > newsize) 
+        if (bytes_left_to_copy < CPY_BUFFER_LEN)
         {
-            tocopy=newsize-fpos;
+            buff_size=bytes_left_to_copy;
         }
-        if (fread(buffer,tocopy,1,infileptr) == 0)
+        if (fread(buffer,buff_size,1,infileptr) != 1)
         {
-            fprintf(stderr,"Read error.\n"); 
+            perror("fread"); 
             ret = -1;
             goto rom_trim_cleanup;
         }
-        if (fwrite(buffer,tocopy,1,outfileptr) == 0)
+        if (fwrite(buffer,buff_size,1,outfileptr) != 1)
         {
-            fprintf(stderr,"Write error.\n"); 
+            perror("fwrite");
             ret = -1;
             goto rom_trim_cleanup;
         }
-        fpos+=tocopy;
+        bytes_left_to_copy-=buff_size;
     }
 
     //Done
-    dsprintf("File trimmed to %d bytes (saved %.1f MB).\n", newsize,(filesize-newsize)/(float)MB);
+    dsprintf("Reduced file %d -> %d bytes (saved %.1f MB).\n", 
+              rom_info->filesystem_size, newsize,(rom_info->filesystem_size - newsize)/(float)MB);
 
 
 rom_trim_cleanup:
