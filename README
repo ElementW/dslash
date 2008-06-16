@@ -1,7 +1,5 @@
 DSlash, a Nintendo DS rom tool
-based on ndstrim by recover89@gmail.com
 Copyright (C) 2008 hyplex@gmail.com
-Homepage: http://code.google.com/p/dslash
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -17,49 +15,39 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
--------------------------------------------------------------------------------
-About DSlash
--------------------------------------------------------------------------------
+##############################################################################
+ABOUT DSlash
+##############################################################################
 
-DSlash is a "Swiss Army Knife" for dealing with Nintendo DS (.nds) ROM files.
-It was originally created as a fork of ndstrim.
+Dslash is a swiss army knife for dealing with Nintendo DS Roms files.  
+Its was originally created as a fork from ndstrim.
 
-
--------------------------------------------------------------------------------
+##############################################################################
 Features
--------------------------------------------------------------------------------
-
- - Trim.  DSlash trims .nds files down to the size specified in the ROM
+##############################################################################
+ - Trim.  It trims nds rom files down to the size specified in the ndsrom 
+   headers.
+ - In place trimming.  When trimming in place, the rom passed in is the
+   rom that is modified.  Since no copying is involved this has the advantage
+   of trimming very fast.
+ - Detailed Header information.  Extract internal names,titles,etc from rom
    header.
- - In-place trimming.  When trimming in place, the rom file passed in is the
-   rom file that is modified.  Since no copying is involved this has the
-   advantage of very fast (nearly instantaneous) operation.
- - Detailed Header information.  Extracts internal names, game titles, etc.
-   from the ROM header.
- - Works on both little-endian (verified on x86) and big-endian (verified on
-   MIPS) architectures.
+ - Verified to work on both Little Endian (verified on x86) and Big Endian
+   (verified on mips) Architectures.:
 
 
--------------------------------------------------------------------------------
+##############################################################################
 Usage
--------------------------------------------------------------------------------
-
-(Usage is provided tersely on the command line as well with the -h option)
-
-Usage: ./dslash [-hpdvi] [-t <icon_file>] ndsfile [trimmed_ndsfile]
+##############################################################################
+Usage is provided tersely on the command line as well with the -h option
 
 e.g.
-$ ./dslash [options] nds_file.nds new_nds_filename.nds
-OR
-$ ./dslash -i nds_file.nds
+: ./dslash -h
+Usage: ./dslash [-hpdvi] [-t <icon_file>] ndsfile [trimmed_ndsfile]
+       -h : help
+       -p : print ROM information
+       -i : trim ROM in place (very fast)
+       -d : debug output
+       -v : verbose
 
-OPTIONS:
-    -h : show help
-    -p : print ROM information
-    -i : trim ROM in place (very fast)
-    -d : print debug output
-    -v : verbose output
-
-(NOT YET WORKING:)
-     -t <filename> : extract icon from ROM into filename (bmp format)
-
+       -t <filename>  : extract icon from ROM into filename (bmp format)

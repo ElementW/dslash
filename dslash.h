@@ -1,38 +1,15 @@
-/*-----------------------------------------------------------------------------
-
-DSlash, a Nintendo DS ROM tool
-based on ndstrim by recover89@gmail.com
-Copyright (C) 2008 hyplex@gmail.com
-Homepage: http://dslash.googlecode.com
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
------------------------------------------------------------------------------*/
-
-/*
-
-ROM size is available in four bytes at 0x80-0x83.
-Wifi data is stored in 136 bytes after ROM data.
-Filesize is checked to be at least 0x200 bytes to make sure it contains a
-proper DS cartridge header. Filesize is then checked to be at least
-(ROM size + wifi length) to avoid errors.
-
-Sources:
-http://nocash.emubase.de/gbatek.htm
-http://forums.ds-xtreme.com/showthread.php?t=1964
-http://gbatemp.net/index.php?showtopic=44022
-
+/* ndstrim by recover89@gmail.com
+   Trims NDS roms fast and reliable.
+   ROM size is available in four bytes at 0x80-0x83.
+   Wifi data is stored on 136 bytes after ROM data.
+   Filesize is checked to be at least 0x200 bytes to make sure it contains a DS cartridge header.
+   Filesize is then checked to be at least the rom size+wifi to avoid errors.
+   Source code licensed under GNU GPL version 2 or later.
+   
+   Sources:
+   http://nocash.emubase.de/gbatek.htm
+   http://forums.ds-xtreme.com/showthread.php?t=1964
+   http://gbatemp.net/index.php?showtopic=44022
 */
 
 #ifndef NDSTRIM_H
@@ -60,7 +37,6 @@ http://gbatemp.net/index.php?showtopic=44022
 //
 // Constants/Macros
 //
-#define VERSION "0.0.1\n"
 
 
 //
@@ -134,7 +110,6 @@ typedef struct __attribute__ ((packed)) {
 typedef struct {
     nds_rom_hdr_t        hdr;  
     nds_rom_icon_title_t icon;
-    unsigned int filesystem_size;
 } nds_rom_info_t ;
 
 
@@ -145,7 +120,7 @@ typedef struct {
 int rom_trim_stdin(FILE *infileptr, FILE *outfileptr, nds_rom_info_t *rom_info);
 int parse_commandline(int argc, char *argv[]);
 void print_rom_information(FILE *infileptr, nds_rom_info_t *rom_info);
-int get_nds_info(FILE* nds_rom_fp, nds_rom_info_t *rom_info);
+int get_nds_header(FILE* nds_rom_fp, nds_rom_info_t *rom_info);
 int rom_trim(FILE *infileptr, FILE *outfileptr, nds_rom_info_t *rom_info);
 int rom_trim_inplace(FILE *infileptr, nds_rom_info_t *rom_info);
 void dsprintf(char *format,...);
