@@ -33,6 +33,11 @@ http://nocash.emubase.de/gbatek.htm
 http://forums.ds-xtreme.com/showthread.php?t=1964
 http://gbatemp.net/index.php?showtopic=44022
 
+
+The CRC calculations and maker codes where taken from ndstool.cpp by Rafael Vuijk
+
+
+
 */
 
 #include <stdio.h>
@@ -44,7 +49,6 @@ http://gbatemp.net/index.php?showtopic=44022
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
 
 
 #include "dslash.h"
@@ -89,6 +93,17 @@ static struct {
 
 
 
+uint16_t crc_16(uint8_t *start , uint32_t length)
+{
+    unsigned short crc = 0xFFFF;
+    uint8_t * end=start+length;
+    for (; start<end; start++)
+    {
+        crc = (crc >> 8) ^ crc16table[(crc ^ *start) & 0xFF];
+    }
+    return crc;
+}
+
 
 
 
@@ -126,7 +141,6 @@ int get_nds_info(FILE* nds_rom_fp, nds_rom_info_t *rom_info)
             break;
         }
         total_bytes_read=sizeof(nds_rom_hdr_t);
-
 
         // we make speed optimizations based on if we are doing stdin
         // or regular file io.
@@ -457,7 +471,32 @@ int parse_commandline(int argc, char *argv[])
     return 0;
 }
 
+int maker_lookup(uint8_t maker_code[2], char *name, int name_len)
+{
+    int ret=0;
+    int i=0;
+    do
+    {
+        if (name==NULL)
+        {
+            ret=-1;
+            break;
+        }
+        for ( i=0 ; makers[i].makercode!=0; i++)
+        {
+            if ( (maker_code[0] == makers[i].makercode[0]) && 
+                 (maker_code[1] == makers[i].makercode[1]) )
+            {
+                strncpy(name,makers[i].name,name_len);
+                break;
+            }
+        }
 
+    } while(0);
+
+    return ret;
+
+}
 
 void print_rom_information(FILE *infileptr, nds_rom_info_t *rom_info)
 {
@@ -467,6 +506,7 @@ void print_rom_information(FILE *infileptr, nds_rom_info_t *rom_info)
     unsigned int rom_size=0;
     unsigned int total_rom_size=0;
     unsigned int i=0;
+    uint16_t crc_calc=0;
     int bytes_saved=0;
     char *tmpstr=NULL;
 
@@ -510,13 +550,43 @@ void print_rom_information(FILE *infileptr, nds_rom_info_t *rom_info)
     rom_size=endian_32(rom_info->hdr.rom_size);
     total_rom_size=rom_size+WIFI_LEN;
 
+    //
+    // Print game code
+    //
     strncpy(str_buff,(char *)rom_info->hdr.game_code,sizeof(rom_info->hdr.game_code));
     str_buff[sizeof(rom_info->hdr.game_code)]=0;
     dsprintf("Game code                : %s\n",str_buff);
 
+    //
+    // Print rom crc
+    //
+    dsprintf("Rom Header crc-16        : 0x%x",endian_16(rom_info->hdr.hdr_sum));
+    crc_calc=crc_16((uint8_t *)rom_info,0x15e);
+    if (crc_calc == endian_16(rom_info->hdr.hdr_sum))
+    {
+        dsprintf(" (Verified)\n",crc_calc);
+    }
+    else
+    {
+        dsprintf(" (INVALID! should be 0x%x)\n",crc_calc);
+    }
+    //
+    // Print Maker info
+    //
     strncpy(str_buff,(char *)rom_info->hdr.maker_code,sizeof(rom_info->hdr.maker_code));
     str_buff[sizeof(rom_info->hdr.maker_code)]=0;
-    dsprintf("Maker code               : %s\n",str_buff);
+    dsprintf("Maker code               : %s",str_buff);
+    if ( ! maker_lookup(rom_info->hdr.maker_code, str_buff,sizeof(str_buff) ) )
+    {
+    dsprintf(" (%s)\n",str_buff);
+    }
+    else
+    {
+        dsprintf("\n");
+    }
+
+
+
     if (flag.stdin)
     {
         dsprintf("Filesystem ROM size      : N/A during stdin\n");

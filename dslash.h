@@ -39,7 +39,8 @@ http://gbatemp.net/index.php?showtopic=44022
 #define NDSTRIM_H
 
 #include <endian.h>
-
+#include <stdint.h>
+#include <stdio.h>
 
 // determine byte order.  nds rom files are little endian
 #if __BYTE_ORDER == __LITTLE_ENDIAN
@@ -131,6 +132,19 @@ typedef struct __attribute__ ((packed)) {
 //  uint8_t unknown[0x840]; //  840h  -    End of Icon/Title structure (next 1C0h bytes usually FFh-filled)
 } nds_rom_icon_title_t ;
 
+
+
+struct Maker
+{
+    char *makercode;
+    char *name;
+};
+
+
+extern const unsigned short crc16table[];
+extern struct Maker makers[];
+
+
 typedef struct {
     nds_rom_hdr_t        hdr;  
     nds_rom_icon_title_t icon;
@@ -150,5 +164,7 @@ int rom_trim(FILE *infileptr, FILE *outfileptr, nds_rom_info_t *rom_info);
 int rom_trim_inplace(FILE *infileptr, nds_rom_info_t *rom_info);
 void dsprintf(char *format,...);
 void dsprintfd(char *format,...);
+uint16_t crc_16(uint8_t *start , uint32_t length);
+int maker_lookup(uint8_t maker_code[2], char *name, int name_len);
 
 #endif /* NDSTRIM_H */

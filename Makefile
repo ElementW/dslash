@@ -24,7 +24,7 @@
 CC=gcc
 CFLAGS=-pg -g -Wall
 CPPFLAGS=
-OBJS=  dslash.o
+OBJS=  dslash.o tables.o
 FINAL = dslash
 
 all : dslash
