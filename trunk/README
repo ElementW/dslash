@@ -17,6 +17,13 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+Code
+Code started as a fork from ndstrim.
+
+
+Rafael Vuijk (ndstool)
+The crc16 calculations and Maker table was taken from ndstool.
+
 -------------------------------------------------------------------------------
 About DSlash
 -------------------------------------------------------------------------------
