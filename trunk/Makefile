@@ -22,17 +22,12 @@
 #makefile
 
 CC=gcc
-CFLAGS=-pg -g -Wall
+CFLAGS=-g -Wall
 CPPFLAGS=
 OBJS=  dslash.o tables.o
 FINAL = dslash
 
 all : dslash
-
-
-debug: $(OBJS)
-	$(CC) -g -Wall -DMEMWATCH -o $(FINAL) $(OBJS)
-
 
 dslash : $(OBJS)
 	$(CC) $(CFLAGS) -o $(FINAL) $(OBJS)
